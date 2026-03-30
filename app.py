@@ -15,7 +15,6 @@ init_db()
 st.set_page_config(
     page_title="Tech0 Search v1.0",
     page_icon="🔍",
-    layout="wide"
 )
 
 # ── キャッシュ付きインデックス構築 ─────────────────────────────
