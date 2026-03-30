@@ -15,6 +15,7 @@ init_db()
 st.set_page_config(
     page_title="Tech0 Search v1.0",
     page_icon="🔍",
+    layout="wide"
 )
 
 # ── キャッシュ付きインデックス構築 ─────────────────────────────
@@ -47,58 +48,68 @@ tab_search, tab_crawl, tab_list = st.tabs(
 )
 
 # ── 検索タブ ───────────────────────────────────────────────────
+# ── 検索タブ ───────────────────────────────────────────────────
 with tab_search:
-    st.subheader("キーワードで検索")
+    st.subheader("🔍 キーワード検索")
 
-    col_search, col_options = st.columns([3, 1])
-    with col_search:
-        query = st.text_input("🔍 キーワードを入力", placeholder="例: DX, IoT, 製造業",
-                              label_visibility="collapsed")
-    with col_options:
-        top_n = st.selectbox("表示件数", [10, 20, 50], index=0)
+    # ✅ 変更③：中央寄せ＆大きく
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        query = st.text_input(
+            "",
+            placeholder="例: DX, IoT, 製造業",
+            label_visibility="collapsed"
+        )
+
+    # ✅ 変更④：表示件数を下に移動
+    top_n = st.select_slider("表示件数", options=[10, 20, 50], value=10)
 
     if query:
         results = engine.search(query, top_n=top_n)
-        log_search(query, len(results))    # 検索するたびに自動記録（Step7で実装予定）
+        log_search(query, len(results))
 
-        st.markdown(f"**📊 検索結果：{len(results)} 件**（TF-IDFスコア順）")
+        st.markdown(f"### 📊 {len(results)} 件ヒット")
         st.divider()
 
         if results:
             for i, page in enumerate(results, 1):
-                with st.container():
-                    col_rank, col_title, col_score = st.columns([0.5, 4, 1])
-                    with col_rank:
-                        # 上位3件にはメダルを表示する
-                        medal = ["🥇", "🥈", "🥉"][i - 1] if i <= 3 else str(i)
-                        st.markdown(f"### {medal}")
-                    with col_title:
-                        st.markdown(f"### {page['title']}")
-                    with col_score:
-                        # relevance_score（最終スコア）と base_score（TF-IDFのみ）を両方表示
-                        st.metric("スコア", f"{page['relevance_score']}",
-                                  delta=f"基準: {page['base_score']}")
 
+                # ✅ 変更⑤：カード風にする
+                with st.container(border=True):
+
+                    col1, col2 = st.columns([4, 1])
+
+                    with col1:
+                        medal = ["🥇", "🥈", "🥉"][i - 1] if i <= 3 else f"{i}位"
+                        st.markdown(f"### {medal} {page['title']}")
+
+                    with col2:
+                        # ✅ 変更⑥：スコアをシンプル化
+                        st.metric("スコア", f"{page['relevance_score']}")
+
+                    # 説明
                     desc = page.get("description", "")
                     if desc:
-                        st.markdown(f"*{desc[:200]}{'...' if len(desc) > 200 else ''}*")
+                        st.caption(desc[:150] + "...")
 
+                    # タグ
                     kw = page.get("keywords", "") or ""
                     if kw:
                         kw_list = [k.strip() for k in kw.split(",") if k.strip()][:5]
                         tags = " ".join([f"`{k}`" for k in kw_list])
-                        st.markdown(f"🏷️ {tags}")
+                        st.markdown(tags)
 
+                    # メタ情報
                     col1, col2, col3, col4 = st.columns(4)
-                    with col1: st.caption(f"👤 {page.get('author', '不明') or '不明'}")
-                    with col2: st.caption(f"📊 {page.get('word_count', 0)} 語")
-                    with col3: st.caption(f"📁 {page.get('category', '未分類') or '未分類'}")
+                    with col1: st.caption(f"👤 {page.get('author', '不明')}")
+                    with col2: st.caption(f"📊 {page.get('word_count', 0)}語")
+                    with col3: st.caption(f"📁 {page.get('category', '未分類')}")
                     with col4: st.caption(f"📅 {(page.get('crawled_at', '') or '')[:10]}")
 
-                    st.markdown(f"🔗 [{page['url']}]({page['url']})")
-                    st.divider()
+                    # URL（ボタン化）
+                    st.link_button("🔗 ページを見る", page["url"])  # ←変更
         else:
-            st.info("該当するページが見つかりませんでした")
+            st.warning("該当するページが見つかりませんでした")
 
 # ── クローラータブ ─────────────────────────────────────────────
 if "crawl_results" not in st.session_state:
